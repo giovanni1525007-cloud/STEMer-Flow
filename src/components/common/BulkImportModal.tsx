@@ -95,6 +95,36 @@ function parseCSV(text: string): string[][] {
   return rows;
 }
 
+function normalizeHeader(value: string): string {
+  const normalized = value
+    .replace(/^\uFEFF/, '')
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const aliases: Record<string, string> = {
+    name: 'title',
+    session_name: 'title',
+    task_name: 'title',
+    subject_name: 'subject',
+    minutes: 'duration',
+    duration_minutes: 'duration',
+    allow_split: 'allow_splitting',
+    split: 'allow_splitting',
+  };
+
+  return aliases[normalized] || normalized;
+}
+
+function normalizeSubject(value: string): string {
+  const normalized = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const aliases: Record<string, string> = {
+    math: 'mathematics',
+  };
+  return aliases[normalized] || normalized;
+}
+
 function validateAndParseRows(
   csvRows: string[][],
   type: ImportType,
@@ -105,7 +135,7 @@ function validateAndParseRows(
   }
 
   const columns = type === 'sessions' ? SESSION_COLUMNS : TASK_COLUMNS;
-  const headerRow = csvRows[0].map((h) => h.toLowerCase().replace(/\s+/g, '_'));
+  const headerRow = csvRows[0].map(normalizeHeader);
   const colIndexMap: Record<string, number> = {};
 
   columns.forEach((col) => {
@@ -128,6 +158,7 @@ function validateAndParseRows(
 
   const valid: ParsedDataRow[] = [];
   const errors: ParsedRow[] = [];
+  const subjectNameMap = new Map(subjectNames.map((name) => [normalizeSubject(name), name]));
 
   for (let i = 1; i < csvRows.length; i++) {
     const row = csvRows[i];
@@ -173,18 +204,19 @@ function validateAndParseRows(
     const notes = rowData.notes || '';
 
     if (type === 'sessions') {
-      const subjectName = (rowData.subject || '').trim();
-      if (!subjectName) {
+      const rawSubjectName = (rowData.subject || '').trim();
+      const subjectName = subjectNameMap.get(normalizeSubject(rawSubjectName)) || rawSubjectName;
+      if (!rawSubjectName) {
         rowErrors.push('Subject is required');
-      } else if (!subjectNames.includes(subjectName)) {
-        rowErrors.push(`Subject "${subjectName}" not found`);
+      } else if (!subjectNameMap.has(normalizeSubject(rawSubjectName))) {
+        rowErrors.push(`Subject "${rawSubjectName}" not found`);
       }
 
       let allowSplitting = false;
       const splitStr = (rowData.allow_splitting || '').toLowerCase().trim();
-      if (splitStr && !['true', 'false'].includes(splitStr)) {
-        rowErrors.push('Allow Splitting must be true or false');
-      } else if (splitStr === 'true') {
+      if (splitStr && !['true', 'false', 'yes', 'no', '1', '0'].includes(splitStr)) {
+        rowErrors.push('Allow Splitting must be true, false, yes, or no');
+      } else if (['true', 'yes', '1'].includes(splitStr)) {
         allowSplitting = true;
       }
 

@@ -148,9 +148,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     setData((prev) => ({ ...prev, sessions: [...prev.sessions, newSession] }));
     supabase.from('study_sessions').insert({
+      id: newSession.id,
       subject_id: newSession.subjectId,
       subject_name: newSession.subjectName,
       title: newSession.title,
+      duration: newSession.duration,
       duration_minutes: newSession.duration,
       priority: newSession.priority,
       deadline: newSession.deadline,
@@ -160,7 +162,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       completed_at: null,
       scheduled_date: newSession.scheduledDate,
       actual_minutes: 0,
-    }).then();
+      focus_time_spent: 0,
+    }).then(({ error }) => {
+      if (error) console.error('Failed to save study session:', error);
+    });
   };
 
   const updateSession: AppDataContextType['updateSession'] = (id, updates) => {
@@ -171,7 +176,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const dbUpdates: Record<string, any> = {};
     if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
     if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt;
-    if (updates.focusTimeSpent !== undefined) dbUpdates.actual_minutes = updates.focusTimeSpent;
+    if (updates.focusTimeSpent !== undefined) {
+      dbUpdates.actual_minutes = updates.focusTimeSpent;
+      dbUpdates.focus_time_spent = updates.focusTimeSpent;
+    }
     if (updates.scheduledDate !== undefined) dbUpdates.scheduled_date = updates.scheduledDate;
     if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
     if (updates.deadline !== undefined) dbUpdates.deadline = updates.deadline;
@@ -262,6 +270,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         completed: true,
         completed_at: new Date().toISOString(),
         actual_minutes: session.focusTimeSpent + focusMinutes,
+        focus_time_spent: session.focusTimeSpent + focusMinutes,
         updated_at: new Date().toISOString(),
       }).eq('id', id).then();
 
@@ -306,7 +315,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     setData((prev) => ({ ...prev, sharedTasks: [...prev.sharedTasks, newTask] }));
     supabase.from('shared_tasks').insert({
+      id: newTask.id,
       title: newTask.title,
+      duration: newTask.duration,
       duration_minutes: newTask.duration,
       priority: newTask.priority,
       deadline: newTask.deadline,
@@ -315,7 +326,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       completed_at: null,
       scheduled_date: newTask.scheduledDate,
       actual_minutes: 0,
-    }).then();
+      focus_time_spent: 0,
+    }).then(({ error }) => {
+      if (error) console.error('Failed to save shared task:', error);
+    });
   };
 
   const updateSharedTask: AppDataContextType['updateSharedTask'] = (id, updates) => {
@@ -383,6 +397,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       supabase.from('shared_tasks').update({
         completed: true,
         completed_at: new Date().toISOString(),
+        actual_minutes: task.focusTimeSpent,
+        focus_time_spent: task.focusTimeSpent,
         updated_at: new Date().toISOString(),
       }).eq('id', id).then();
 
