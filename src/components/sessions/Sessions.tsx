@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Clock, CheckCircle2, Trash2, Edit, Timer, Calendar, Scissors, Filter } from 'lucide-react';
+import { Plus, Clock, CheckCircle2, Trash2, Edit, Timer, Calendar, Scissors, Filter, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppData } from '@/context/AppDataContext';
 import { useAuth } from '@/context/AuthContext';
@@ -11,15 +11,17 @@ import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AddSessionModal } from '@/components/sessions/AddSessionModal';
+import { BulkImportModal } from '@/components/common/BulkImportModal';
 import { pomodoroService } from '@/services/pomodoroService';
 import { getSubjectsForGrade, type StudySession, type Subject } from '@/types';
 
 export function Sessions() {
-  const { data, completeSession, deleteSession } = useAppData();
+  const { data, addSession, completeSession, deleteSession } = useAppData();
   const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [filter, setFilter] = useState('all');
   const [subjectFilter, setSubjectFilter] = useState('all');
 
@@ -54,10 +56,16 @@ export function Sessions() {
           <h1 className="text-2xl font-bold text-text-primary">Study Sessions</h1>
           <p className="text-text-muted mt-1">All your study sessions across subjects.</p>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="w-4 h-4" />
-          Add Session
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4" />
+            Import
+          </Button>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Add Session
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -168,6 +176,29 @@ export function Sessions() {
       )}
 
       <AddSessionModal open={addOpen} onClose={() => setAddOpen(false)} />
+
+      <BulkImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        type="sessions"
+        availableSubjects={availableSubjects}
+        onImport={(rows) => {
+          rows.forEach((row) => {
+            const subject = availableSubjects.find((s) => s.name === row.subjectName);
+            addSession({
+              subjectId: subject?.id || '',
+              subjectName: row.subjectName || '',
+              title: row.title,
+              duration: row.duration,
+              priority: row.priority,
+              deadline: row.deadline,
+              notes: row.notes,
+              allowSplitting: row.allowSplitting || false,
+              scheduledDate: null,
+            });
+          });
+        }}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, isNetworkError, friendlyError } from './supabaseClient';
 import type { User, Grade, Language } from '@/types';
 
 export interface SignUpParams {
@@ -40,6 +40,9 @@ export const authService = {
     });
 
     if (error) {
+      if (isNetworkError(error)) {
+        return { user: null, error: friendlyError(error) };
+      }
       if (error.message.includes('already registered')) {
         return { user: null, error: 'An account with this phone number already exists.' };
       }
@@ -70,6 +73,9 @@ export const authService = {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
+      if (isNetworkError(error)) {
+        return { user: null, error: friendlyError(error) };
+      }
       if (error.message.includes('Invalid login credentials')) {
         return { user: null, error: 'No account found with this phone number or incorrect password.' };
       }

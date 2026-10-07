@@ -20,9 +20,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const current = await authService.getCurrentUser();
-      setUser(current);
-      setLoading(false);
+      try {
+        const current = await authService.getCurrentUser();
+        setUser(current);
+      } catch (err) {
+        console.error('Failed to restore session:', err);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 

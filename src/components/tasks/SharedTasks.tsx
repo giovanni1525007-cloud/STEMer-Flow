@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Clock, CheckCircle2, Trash2, Edit, Calendar, Filter } from 'lucide-react';
+import { Plus, Clock, CheckCircle2, Trash2, Edit, Calendar, Filter, Upload } from 'lucide-react';
 import { useAppData } from '@/context/AppDataContext';
 import { useToast } from '@/components/ui/Toast';
 import { Card } from '@/components/ui/Card';
@@ -10,13 +10,15 @@ import { Input, Select, Textarea } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { AddTaskModal } from '@/components/tasks/AddTaskModal';
+import { BulkImportModal } from '@/components/common/BulkImportModal';
 import { pomodoroService } from '@/services/pomodoroService';
 import type { SharedTask, Priority } from '@/types';
 
 export function SharedTasks() {
-  const { data, completeSharedTask, deleteSharedTask, updateSharedTask } = useAppData();
+  const { data, addSharedTask, completeSharedTask, deleteSharedTask, updateSharedTask } = useAppData();
   const { showToast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [filter, setFilter] = useState('all');
   const [editTask, setEditTask] = useState<SharedTask | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -41,10 +43,16 @@ export function SharedTasks() {
           <h1 className="text-2xl font-bold text-text-primary">Shared Tasks</h1>
           <p className="text-text-muted mt-1">Independent tasks not tied to any subject.</p>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="w-4 h-4" />
-          Add Task
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4" />
+            Import
+          </Button>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Add Task
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -124,6 +132,25 @@ export function SharedTasks() {
       )}
 
       <AddTaskModal open={addOpen} onClose={() => setAddOpen(false)} />
+
+      <BulkImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        type="tasks"
+        availableSubjects={[]}
+        onImport={(rows) => {
+          rows.forEach((row) => {
+            addSharedTask({
+              title: row.title,
+              duration: row.duration,
+              priority: row.priority,
+              deadline: row.deadline,
+              notes: row.notes,
+              scheduledDate: null,
+            });
+          });
+        }}
+      />
 
       {/* Edit Task Modal */}
       <EditTaskModal

@@ -101,10 +101,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     (async () => {
-      const loaded = await loadUserData(user.id);
-      if (!cancelled) {
-        setData(loaded);
-        setLoading(false);
+      try {
+        const loaded = await loadUserData(user.id);
+        if (!cancelled) {
+          setData(loaded);
+        }
+      } catch (err) {
+        console.error('Failed to load user data:', err);
+        if (!cancelled) {
+          setData(getDefaultUserData());
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
